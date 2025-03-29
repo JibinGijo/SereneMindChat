@@ -3,44 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mental Health Support Chatbot</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Mental Health Support Chat</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .chat-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: 70vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 18px;
+            max-width: 70%;
+        }
+        .user-message {
+            background: #e3f2fd;
+            margin-left: auto;
+        }
+        .bot-message {
+            background: #f1f1f1;
+            margin-right: auto;
+        }
+        .input-area {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #eee;
+        }
+        #user-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+        }
+        #send-btn {
+            background: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        .message-time {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1><i class="fas fa-heart"></i> Mental Health Support</h1>
-        <p>Choose your preferred response style below</p>
-    </header>
-
     <div class="chat-container">
-        <!-- Response Mode Selector -->
-        <div class="mode-selector">
-            <label for="response-mode"><i class="fas fa-robot"></i> Response Style:</label>
-            <select id="response-mode">
-                <option value="both">Both (Default)</option>
-                <option value="solution">Solution Focused</option>
-                <option value="support">Emotional Support</option>
-            </select>
-            <div class="mode-description" id="mode-description">
-                <p>Alternates between emotional support and practical solutions</p>
-            </div>
-        </div>
-
-        <!-- Chat Box -->
         <div class="chat-box" id="chat-box">
             <div class="message bot-message">
-                <div class="message-content">
-                    Hi there! I'm here to listen and help. How are you feeling today?
-                </div>
-                <div class="message-meta">Just now</div>
+                Hi there! I'm here to listen. How are you feeling today?
+                <div class="message-time">Just now</div>
             </div>
         </div>
-
-        <!-- Input Area -->
         <div class="input-area">
-            <input type="text" id="user-input" placeholder="Type your message here..." autocomplete="off">
-            <button id="send-btn"><i class="fas fa-paper-plane"></i> Send</button>
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button id="send-btn">Send</button>
         </div>
     </div>
 
@@ -49,151 +86,52 @@
             const chatBox = document.getElementById('chat-box');
             const userInput = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
-            const modeSelector = document.getElementById('response-mode');
-            const modeDescription = document.getElementById('mode-description');
 
-            // Mode descriptions
-            const modeDescriptions = {
-                both: "Alternates between emotional support and practical solutions",
-                solution: "Focuses on actionable advice and problem-solving",
-                support: "Provides emotional validation and active listening"
-            };
-
-            // Update mode description when changed
-            modeSelector.addEventListener('change', function() {
-                modeDescription.innerHTML = `<p>${modeDescriptions[this.value]}</p>`;
-            });
-
-            // Add a message to the chat
-            function addMessage(role, content, isEmergency = false) {
+            function addMessage(role, content) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${role}-message`;
                 
-                const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 
-                if (isEmergency) {
-                    messageDiv.innerHTML = `
-                        <div class="emergency-alert">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <strong>Emergency Support</strong>
-                            <p>${content}</p>
-                        </div>
-                        <div class="message-meta">${timestamp}</div>
-                    `;
-                } else {
-                    messageDiv.innerHTML = `
-                        <div class="message-content">${content}</div>
-                        <div class="message-meta">${timestamp}</div>
-                    `;
-                }
+                messageDiv.innerHTML = `
+                    ${content}
+                    <div class="message-time">${time}</div>
+                `;
                 
                 chatBox.appendChild(messageDiv);
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
 
-            // Show typing indicator
-            function showTypingIndicator() {
-                const typingDiv = document.createElement('div');
-                typingDiv.className = 'message bot-message typing-indicator';
-                typingDiv.id = 'typing-indicator';
-                typingDiv.innerHTML = `
-                    <div class="typing-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                    <div class="message-meta">Just now</div>
-                `;
-                chatBox.appendChild(typingDiv);
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
-
-            // Hide typing indicator
-            function hideTypingIndicator() {
-                const indicator = document.getElementById('typing-indicator');
-                if (indicator) indicator.remove();
-            }
-
-            // Handle emergency situation
-            function handleEmergency() {
-                const confirmHelp = confirm("Would you like me to connect you with professional help?");
-                if (confirmHelp) {
-                    if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition(
-                            position => {
-                                const location = {
-                                    lat: position.coords.latitude,
-                                    lng: position.coords.longitude
-                                };
-                                sendEmergencyAlert(location);
-                            },
-                            error => {
-                                const location = prompt("Please enter your location (city/address):");
-                                if (location) sendEmergencyAlert(location);
-                            }
-                        );
-                    } else {
-                        const location = prompt("Please enter your location (city/address):");
-                        if (location) sendEmergencyAlert(location);
-                    }
-                }
-            }
-
-            // Send emergency alert to server
-            function sendEmergencyAlert(location) {
-                fetch('/emergency', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ location })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    alert(`Help is on the way: ${data.status}`);
-                });
-            }
-
-            // Send message to server
-            function sendMessage() {
+            async function sendMessage() {
                 const message = userInput.value.trim();
                 if (!message) return;
-
+                
                 addMessage('user', message);
                 userInput.value = '';
                 
-                showTypingIndicator();
-                
-                const selectedMode = modeSelector.value;
-                
-                fetch('/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: message,
-                        mode: selectedMode
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    hideTypingIndicator();
-                    addMessage('bot', data.response, data.emergency);
+                try {
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message })
+                    });
                     
-                    if (data.emergency) {
-                        handleEmergency();
+                    const data = await response.json();
+                    
+                    if (data.response) {
+                        addMessage('bot', data.response);
+                    } else {
+                        throw new Error('No response from server');
                     }
-                })
-                .catch(error => {
-                    hideTypingIndicator();
-                    addMessage('bot', "Sorry, I'm having trouble connecting. Please try again later.");
+                } catch (error) {
+                    addMessage('bot', "Sorry, I'm having trouble responding. Please try again.");
                     console.error('Error:', error);
-                });
+                }
             }
 
-            // Event listeners
             sendBtn.addEventListener('click', sendMessage);
             userInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    sendMessage();
-                }
+                if (e.key === 'Enter') sendMessage();
             });
         });
     </script>
