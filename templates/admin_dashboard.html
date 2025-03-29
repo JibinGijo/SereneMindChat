@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+    <header>
+        <h1><i class="fas fa-shield-alt"></i> Emergency Response Dashboard</h1>
+        <a href="/admin/logout" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </header>
+
+    <div class="dashboard-container">
+        <section class="emergencies">
+            <h2><i class="fas fa-exclamation-triangle"></i> Recent Emergencies</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Location</th>
+                            <th>Messages</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emergency in emergencies %}
+                        <tr>
+                            <td>{{ emergency.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <a href="https://maps.google.com/?q={{ emergency.latitude }},{{ emergency.longitude }}" target="_blank">
+                                    <i class="fas fa-map-marker-alt"></i> View Map
+                                </a>
+                                {% if emergency.address %}<br>{{ emergency.address }}{% endif %}
+                            </td>
+                            <td>{{ emergency.msg_count }}</td>
+                            <td>
+                                <button class="dispatch-btn" data-location="{{ emergency.location_id }}">
+                                    <i class="fas fa-ambulance"></i> Dispatch
+                                </button>
+                                <select class="responder-select" data-location="{{ emergency.location_id }}">
+                                    {% for responder in responders %}
+                                    <option value="{{ responder.responder_id }}">{{ responder.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="responders">
+            <h2><i class="fas fa-user-md"></i> Responders</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Contact</th>
+                        <th>Dispatches</th>
+                        <th>Completed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for responder in responders %}
+                    <tr>
+                        <td>{{ responder.name }}</td>
+                        <td>
+                            <a href="tel:{{ responder.phone }}"><i class="fas fa-phone"></i> {{ responder.phone }}</a><br>
+                            <a href="mailto:{{ responder.email }}"><i class="fas fa-envelope"></i> Email</a>
+                        </td>
+                        <td>{{ responder.total_dispatches }}</td>
+                        <td>{{ responder.completed }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <script>
+        document.querySelectorAll('.dispatch-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const locationId = this.dataset.location;
+                const responderId = this.parentElement.querySelector('.responder-select').value;
+                
+                try {
+                    const response = await fetch(`/admin/dispatch/${locationId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `responder_id=${responder_id}`
+                    });
+                    
+                    if (response.ok) {
+                        alert('Responder dispatched successfully');
+                    } else {
+                        const error = await response.json();
+                        alert(`Error: ${error.error}`);
+                    }
+                } catch (error) {
+                    alert('Failed to dispatch responder');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
