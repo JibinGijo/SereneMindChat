@@ -1,52 +1,44 @@
 import requests
-import logging
-from typing import Optional, List, Dict
-
-logger = logging.getLogger(__name__)
 
 class MentalHealthAssistant:
     def __init__(self):
         self.ollama_url = "http://localhost:11434/api/chat"
-        self.model = "gemma:2b"  # or "llama2" for more conversational tone
-        self.timeout = 30
+        self.model = "gemma:2b"  # Using Gemma 2B
+        self.system_prompt = """You are a compassionate mental health assistant. 
+        Respond with short, empathetic messages (1-2 sentences). Never give medical advice.
+        If user expresses self-harm intent, gently ask if they want help connecting to professionals."""
+
+    def generate_response(self, user_input, history=None):
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            *(history or []),
+            {"role": "user", "content": user_input}
+        ]
         
-    def generate_response(self, user_input: str, history: Optional[List[Dict]] = None) -> str:
         try:
-            messages = [
-                {
-                    "role": "system", 
-                    "content": "You are a compassionate listener. Respond naturally like a human friend would."
-                },
-                {"role": "user", "content": user_input}
-            ]
-            
-            # Include conversation history if available
-            if history:
-                messages = history[-4:] + messages  # Keep last 4 messages for context
-                
             response = requests.post(
                 self.ollama_url,
                 json={
                     "model": self.model,
                     "messages": messages,
-                    "options": {
-                        "temperature": 0.7,  # Balanced creativity
-                        "num_ctx": 2048       # Better context understanding
-                    }
+                    "stream": False,
+                    "options": {"temperature": 0.7}
                 },
-                timeout=self.timeout
+                timeout=15  # Gemma may need slightly more time
             )
             response.raise_for_status()
-            
-            return response.json()['message']['content'].strip()
-            
-        except requests.exceptions.Timeout:
-            return "I need a moment to think about that..."
+            return response.json()['message']['content']
+        
         except Exception as e:
-            logger.error(f"Response error: {str(e)}")
-            return "I missed that. Could you say it again?"
+            return self._emergency_fallback(user_input)
+
+    def _emergency_fallback(self, user_input):
+        lower_input = user_input.lower()
+        if any(phrase in lower_input for phrase in ["kill myself", "end it all", "suicide"]):
+            return "I'm very concerned. Please call 988 or text HOME to 741741. You're not alone."
+        return "I'm having trouble responding. Would you like to try rephrasing?"
 
 assistant = MentalHealthAssistant()
 
-def generate_response(user_input: str, history: Optional[List[Dict]] = None) -> str:
+def generate_response(user_input, history=None):
     return assistant.generate_response(user_input, history)

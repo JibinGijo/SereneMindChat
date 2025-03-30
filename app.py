@@ -1,58 +1,40 @@
 from flask import Flask, render_template, request, jsonify, session
 from datetime import datetime
-import secrets
-import logging
-import os``
-from chatbot.ai_processor import generate_response
-
-# Auto-generated secure secrets
-SECRET_KEY = secrets.token_hex(32)  # Random 64-character hex string
+import json
 
 app = Flask(__name__)
-app.secret_key = SECRET_KEY
+app.secret_key = 'dev'  # For session only - replace with random string in production
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# In-memory storage (replace with database in production)
+conversations = {}
 
 @app.route('/')
 def home():
-    """Initialize new chat session with random ID"""
-    session['conversation_id'] = f"chat-{datetime.now().strftime('%Y%m%d%H%M%S')}-{secrets.token_hex(4)}"
+    session['conversation_id'] = datetime.now().strftime("%Y%m%d%H%M%S")
     return render_template('chat.html')
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    """Handle chat messages with built-in error protection"""
+    user_message = request.json.get('message')
+    conv_id = session.get('conversation_id')
+    
+    if not conv_id in conversations:
+        conversations[conv_id] = []
+    
+    conversations[conv_id].append({'role': 'user', 'content': user_message})
+    
     try:
-        user_message = request.json.get('message', '').strip()
-        if not user_message:
-            return jsonify({'error': 'Empty message'}), 400
-        
-        # Get AI response with automatic retry
-        response = generate_response(user_message)
-        
-        # Ensure valid response
-        if not response or response.lower() in ('undefined', 'null', 'none'):
-            response = "I'm not sure how to respond to that. Could you tell me more?"
-        
-        return jsonify({
-            'response': response,
-            'status': 'success'
-        })
-        
+        from chatbot.ai_processor import generate_response
+        bot_response = generate_response(user_message, conversations[conv_id])
     except Exception as e:
-        logger.error(f"Chat error: {str(e)}")
-        return jsonify({
-            'response': "Let me think about that and try again...",
-            'error': 'Internal error'
-        }), 500
+        bot_response = f"I'm having trouble responding. Please try again later. ({str(e)})"
+    
+    conversations[conv_id].append({'role': 'assistant', 'content': bot_response})
+    
+    return jsonify({
+        'response': bot_response,
+        'history': conversations[conv_id]
+    })
 
 if __name__ == '__main__':
-    # Generate self-signed cert for HTTPS if needed
-    app.run(
-        host='0.0.0.0',
-        port=5000,
-        ssl_context='adhoc' if os.getenv('USE_HTTPS') else None,
-        debug=False
-    )
+    app.run(host='0.0.0.0', port=5000, debug=True)
